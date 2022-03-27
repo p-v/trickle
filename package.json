@@ -5,7 +5,7 @@
   "author": "Pratyush <pratyushverma@outlook.com>",
   "license": "MIT",
   "scripts": {
-    "format": "prettier lib/ --write",
+    "format": "prettier lib/ tests/ --write",
     "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'"
   },
   "devDependencies": {

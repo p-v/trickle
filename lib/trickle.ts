@@ -2,9 +2,17 @@ import _ from "lodash";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-type RetryArgs<T> = {
-  condition: (_: T) => boolean;
-  retryCount: number;
+type RetryConfig = {
+  retryCount?: number;
+  delayInterval?: number;
+};
+
+const DEFAULT_RETRY_COUNT = 5;
+const DEFAULT_DELAY_INTERVAL = 1000;
+
+const defaultRetryConfig = {
+  retryCount: DEFAULT_RETRY_COUNT,
+  delayInterval: DEFAULT_DELAY_INTERVAL,
 };
 
 const varTemplateExpr = new RegExp("^{{.*}}$");
@@ -64,24 +72,29 @@ class Perform<Type> {
   peformUntil<N>(
     fn: (...x: any) => N | PromiseLike<N>,
     args: Parameters<typeof fn>,
-    retry: RetryArgs<N>,
+    retryFn: (_: N) => boolean,
+    retryConfig: RetryConfig = defaultRetryConfig,
     name: string = "performUntil"
   ) {
     const op = async () => {
-      const { condition, retryCount } = retry;
+      const { retryCount, delayInterval } = {
+        ...defaultRetryConfig,
+        ...retryConfig,
+      };
       const resArgs = this.resolveArgs(args);
       let res = await Promise.resolve(fn(...resArgs));
       let retryN = 0;
-      let interval = 1000;
-      while (!(await Promise.resolve(condition(res)))) {
+      let interval = delayInterval;
+      while (!(await Promise.resolve(retryFn(res)))) {
         await delay(interval);
         interval = 2 * interval;
         res = await Promise.resolve(fn(...resArgs));
         retryN++;
         if (retryN >= retryCount) {
-          throw new Error("Failed to fetch");
+          throw new Error("Condition timeout");
         }
       }
+
       return res;
     };
     this.dict.ops.push({ op, name });
@@ -113,7 +126,6 @@ class Perform<Type> {
     name = name || "validate";
     const op = (args: any) => {
       if (!fn(args)) {
-        console.log("Error --------------------------")
         throw new Error("Validation error");
       }
       return true;
@@ -126,8 +138,9 @@ class Perform<Type> {
     let prev = null;
     for (const opr of this.dict.ops) {
       const { op, name } = opr;
-      prev = Promise.resolve(op(prev));
-      console.log("Performing:" + name);
+      console.log("Executing: " + name);
+      prev = await Promise.resolve(op(prev));
+      console.log("Result: " + prev);
     }
     console.log("All operations completed");
   }
@@ -139,8 +152,8 @@ export default class Trickle {
   public static perform<T>(
     fn: (...x: any) => T | PromiseLike<T>,
     args: Parameters<typeof fn>,
-    dict: any = {ops:[], g: {}},
-    name: string = "perform",
+    dict: any = { ops: [], g: {} },
+    name: string = "perform"
   ): Perform<T> {
     const perf = new Perform<T>(dict);
     return perf.perform(fn, args, name);
