@@ -26,4 +26,13 @@ describe("On trickle", () => {
         .done()
     ).to.not.be.rejected;
   });
+
+  it("with store perform operation", async () => {
+    await expect(
+      Trickle.withStore({ env: "prod" })
+        .performNew((x, y) => x + ":" + y, ["{{env}}", 3])
+        .validate((x) => x === "prod:3")
+        .done()
+    ).to.not.be.rejected;
+  });
 });

@@ -2,6 +2,10 @@ import _ from "lodash";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+type Store = {
+  [key: string]: string | number | boolean;
+};
+
 type RetryConfig = {
   retryCount?: number;
   delayInterval?: number;
@@ -15,7 +19,7 @@ const defaultRetryConfig = {
   delayInterval: DEFAULT_DELAY_INTERVAL,
 };
 
-const varTemplateExpr = new RegExp("^{{.*}}$");
+const varTemplateExpr = new RegExp("^{{(.*)}}$");
 
 class Perform<Type> {
   private dict: any;
@@ -36,6 +40,7 @@ class Perform<Type> {
           return _.get(this.dict.g, match[1]);
         }
       }
+      return arg;
     });
   }
 
@@ -49,14 +54,15 @@ class Perform<Type> {
     return this;
   }
 
-  perform(
-    fn: (...x: any) => Type | PromiseLike<Type>,
+  perform<N>(
+    fn: (...x: any) => N | PromiseLike<N>,
     args: Parameters<typeof fn>,
     name = "perform"
-  ): Perform<Type> {
-    const op = (prev: any) => (prev ? fn.call(null, prev) : fn(...args));
+  ): Perform<N> {
+    const op = (prev: any) =>
+      prev ? fn.call(null, prev) : fn(...this.resolveArgs(args));
     this.dict.ops.push({ op, name });
-    return this;
+    return new Perform<N>(this.dict);
   }
 
   performNew<N>(
@@ -148,6 +154,13 @@ class Perform<Type> {
 
 export default class Trickle {
   private constructor() {}
+
+  public static withStore(store: Store) {
+    return new Perform({
+      ops: [],
+      g: store,
+    });
+  }
 
   public static perform<T>(
     fn: (...x: any) => T | PromiseLike<T>,
