@@ -75,7 +75,7 @@ class Perform<Type> {
     return new Perform<N>(this.dict);
   }
 
-  peformUntil<N>(
+  performUntil<N>(
     fn: (...x: any) => N | PromiseLike<N>,
     args: Parameters<typeof fn>,
     retryFn: (_: N) => boolean,
