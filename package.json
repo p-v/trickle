@@ -1,5 +1,5 @@
 {
-  "name": "trickle",
+  "name": "@p-v/trickle",
   "version": "1.0.0",
   "main": "index.js",
   "author": "Pratyush <pratyushverma@outlook.com>",
@@ -22,5 +22,18 @@
   },
   "dependencies": {
     "lodash": "^4.17.21"
-  }
+  },
+  "description": "A simple framework to write flow based operations",
+  "directories": {
+    "lib": "lib",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p-v/trickle.git"
+  },
+  "bugs": {
+    "url": "https://github.com/p-v/trickle/issues"
+  },
+  "homepage": "https://github.com/p-v/trickle#readme"
 }
