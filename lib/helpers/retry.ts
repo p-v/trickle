@@ -13,11 +13,12 @@ const defaultRetryConfig = {
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-export default <N>(
+export const retryFn =
+  <N>(
     successFn: (_: N) => boolean,
     retryConfig: RetryConfig = defaultRetryConfig
   ) =>
-  async (fn: (...x: any) => N | Promise<N>, ...args: Parameters<typeof fn>) => {
+  async <M extends any[]>(fn: (...x: M) => N | Promise<N>, ...args: M) => {
     const { retryCount, delayInterval } = {
       ...defaultRetryConfig,
       ...retryConfig,

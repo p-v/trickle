@@ -1,8 +1,7 @@
-import Trickle from "../lib/trickle";
+import Trickle, { retryFn as retry } from "../lib";
 import { expect } from "chai";
 import sinon from "sinon";
 import { once } from "lodash";
-import retry from "../lib/helpers/retry";
 
 describe("On trickle", () => {
   it("perform single operation", async () => {

@@ -2,6 +2,12 @@
 
 A simple framework to write flow based operations
 
+### Installation
+
+```bash
+npm install @p-v/trickle
+```
+
 ```javascript
 let envArgs = {
   outputTemplate: 'The result is %d'

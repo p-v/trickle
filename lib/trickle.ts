@@ -4,7 +4,7 @@ type Environment = { [key: string]: any };
 const globalEnvTemplateExpr = new RegExp("^{{(.*)}}$");
 const contextEnvTemplateExpr = new RegExp("^<<(.*)>>$");
 
-export default class Trickle<X> {
+export class Trickle<X> {
   private globals: Environment;
   private context: Environment;
   private ops: any[];
@@ -31,8 +31,8 @@ export default class Trickle<X> {
     });
   }
 
-  new<N>(func: (...x: any) => N | Promise<N>, args: Parameters<typeof func>) {
-    this.ops.push(() => func(...this.resolveArgs(args)));
+  new<M extends any[], N>(func: (...x: M) => N | Promise<N>, args: M) {
+    this.ops.push(() => func(...(this.resolveArgs(args) as M)));
     return new Trickle<N>(this.globals, this.context, this.ops);
   }
 

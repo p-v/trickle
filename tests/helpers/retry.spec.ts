@@ -1,4 +1,4 @@
-import retry from "../../lib/helpers/retry";
+import { retryFn as retry } from "../../lib/";
 
 import { expect } from "chai";
 import sinon from "sinon";
