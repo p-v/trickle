@@ -11,6 +11,16 @@ type Settings = {
   logger?: Logger;
 };
 
+type EnvironmentArgType = `{{${string}}}`;
+type ContextArgType = `<<${string}>>`;
+type CustomArgType = EnvironmentArgType | ContextArgType;
+
+type WithCustomArg<T> = {
+  [P in keyof T]:
+    | (T[P] extends object ? WithCustomArg<T[P]> : T[P])
+    | CustomArgType;
+};
+
 const globalEnvTemplateExpr = new RegExp("^{{(.*)}}$");
 const contextEnvTemplateExpr = new RegExp("^<<(.*)>>$");
 
@@ -50,7 +60,7 @@ export class Trickle<X> {
 
   new<M extends any[], N>(
     func: (...x: M) => N | Promise<N>,
-    args: M,
+    args: M | WithCustomArg<M>,
     action: string = "new"
   ) {
     this.ops.push({ fn: () => func(...(this.resolveArgs(args) as M)), action });

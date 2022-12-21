@@ -9,7 +9,7 @@
     "clean": "rm -rf dist/",
     "compile": "yarn clean && tsc",
     "format": "prettier lib/ tests/ --write",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'"
+    "test": "mocha -r ts-node/register 'tests/**/*.ts'"
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",

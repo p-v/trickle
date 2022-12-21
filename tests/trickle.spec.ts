@@ -6,14 +6,14 @@ import { once } from "lodash";
 describe("On trickle", () => {
   it("perform single operation", async () => {
     const ops: any[] = [];
-    const trickle = new Trickle({}, {}, ops);
+    const trickle = new Trickle({}, {}, {}, ops);
     await trickle.new(() => 3, []).done();
     expect(ops.length).to.be.equal(1);
   });
 
   it("perform multi operation", async () => {
     const ops: any[] = [];
-    const trickle = new Trickle({}, {}, ops);
+    const trickle = new Trickle({}, {}, {}, ops);
     await trickle
       .new(() => 3, [])
       .continue(() => 3)
@@ -26,7 +26,7 @@ describe("On trickle", () => {
     const environment = {
       env: "production",
     };
-    const trickle = new Trickle(environment, {}, ops);
+    const trickle = new Trickle(environment, {}, {}, ops);
     const cb = sinon.fake();
     const proxy = once(cb);
     await trickle
@@ -44,7 +44,7 @@ describe("On trickle", () => {
       env: "production",
     };
     const context = {};
-    const trickle = new Trickle(environment, context, ops);
+    const trickle = new Trickle(environment, context, {}, ops);
     const cb = sinon.fake.returns("ok");
     const proxy = once(cb);
 
@@ -99,7 +99,7 @@ describe("On trickle", () => {
     const cb = sinon.fake();
 
     const ops: any[] = [];
-    const trickle = new Trickle({}, {}, ops);
+    const trickle = new Trickle({}, {}, {}, ops);
     await trickle.new(retryableFn, [generator]).continue(cb).done();
 
     expect(ops.length).to.be.equal(2);
