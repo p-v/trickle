@@ -22,6 +22,30 @@ type WithCustomArg<T> = {
 const globalEnvTemplateExpr = new RegExp("^{{(.*)}}$");
 const contextEnvTemplateExpr = new RegExp("^<<(.*)>>$");
 
+function hydrateTemplate(
+  arg: any,
+  globals: Environment,
+  context: Environment
+): any {
+  if (typeof arg === "string") {
+    let match = globalEnvTemplateExpr.exec(arg);
+    if (match) {
+      return _.get(globals, match[1]);
+    }
+    match = contextEnvTemplateExpr.exec(arg);
+    if (match) {
+      return _.get(context, match[1]);
+    }
+  } else if (Array.isArray(arg)) {
+    return arg.map((item) => hydrateTemplate(item, globals, context));
+  } else if (typeof arg === "object") {
+    for (const attr in arg) {
+      arg[attr] = hydrateTemplate(arg[attr], globals, context);
+    }
+  }
+  return arg;
+}
+
 export class Trickle<X> {
   private globals: Environment;
   private context: Environment;
@@ -43,20 +67,8 @@ export class Trickle<X> {
     }
   }
 
-  private resolveArgs(args: any[]) {
-    return args.map((arg) => {
-      if (typeof arg === "string") {
-        let match = globalEnvTemplateExpr.exec(arg);
-        if (match) {
-          return _.get(this.globals, match[1]);
-        }
-        match = contextEnvTemplateExpr.exec(arg);
-        if (match) {
-          return _.get(this.context, match[1]);
-        }
-      }
-      return arg;
-    });
+  private resolveArgs(args: any[]): any {
+    return args.map((arg) => hydrateTemplate(arg, this.globals, this.context));
   }
 
   new<M extends any[], N>(

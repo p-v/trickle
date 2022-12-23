@@ -3,17 +3,21 @@ import { expect } from "chai";
 import sinon from "sinon";
 import { once } from "lodash";
 
+type Config = {
+  multiplier: number;
+};
+
 describe("On trickle", () => {
   it("perform single operation", async () => {
     const ops: any[] = [];
-    const trickle = new Trickle({}, {}, {logger: console}, ops);
+    const trickle = new Trickle({}, {}, {}, ops);
     await trickle.new(() => 3, []).done();
     expect(ops.length).to.be.equal(1);
   });
 
   it("perform multi operation", async () => {
     const ops: any[] = [];
-    const trickle = new Trickle({}, {}, {logger: console}, ops);
+    const trickle = new Trickle({}, {}, {}, ops);
     await trickle
       .new(() => 3, [])
       .continue(() => 3)
@@ -26,7 +30,7 @@ describe("On trickle", () => {
     const environment = {
       env: "production",
     };
-    const trickle = new Trickle(environment, {}, {logger: console}, ops);
+    const trickle = new Trickle(environment, {}, {}, ops);
     const cb = sinon.fake();
     const proxy = once(cb);
     await trickle
@@ -103,6 +107,44 @@ describe("On trickle", () => {
     await trickle.new(retryableFn, [generator]).continue(cb).done();
 
     expect(ops.length).to.be.equal(2);
+    expect(cb.calledWith(0)).to.be.true;
+  });
+
+  it("with retries and context variable perform sucessful operation", async () => {
+    const myFunc = () => {
+      let x = 3;
+      return ({ multiplier }: Config) => {
+        x = x - 1;
+        return x * multiplier;
+      };
+    };
+    const generator = myFunc();
+
+    const retryableFn = retry((x: number) => x == 0, {
+      retryCount: 5,
+      delayInterval: 5,
+    });
+    const cb = sinon.fake();
+
+    const ops: any[] = [];
+    const trickle = new Trickle({}, {}, {}, ops);
+    try {
+      await trickle
+        .new(() => 1, [])
+        .store((x) => ({ multiplier: x }))
+        .new(retryableFn, [
+          generator,
+          {
+            multiplier: "<<multiplier>>",
+          },
+        ])
+        .continue(cb)
+        .done();
+    } catch (err) {
+      console.log(err);
+    }
+
+    expect(ops.length).to.be.equal(4);
     expect(cb.calledWith(0)).to.be.true;
   });
 });
