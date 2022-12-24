@@ -1,11 +1,11 @@
 import { EventEmitter } from "events";
 import _ from "lodash";
-import { Logger, createProgresInstance } from "./progress";
+import { LogOptions, createProgresInstance, ProgressEvent } from "./progress";
 
 type Environment = { [key: string]: any };
 
-type Settings = {
-  logger?: Logger;
+type Options = {
+  logOptions?: LogOptions;
   progress?: EventEmitter;
 };
 
@@ -49,21 +49,21 @@ function hydrateTemplate(
 export class Trickle<X> {
   private globals: Environment;
   private context: Environment;
-  private settings: Settings;
+  private settings: Options;
   private ops: any[];
 
   constructor(
     globals: Environment,
     context: Environment,
-    settings: Settings = {},
+    settings: Options = {},
     ops: any[] = []
   ) {
     this.globals = globals;
     this.context = context;
     this.settings = settings;
     this.ops = ops;
-    if (this.settings.logger && !this.settings.progress) {
-      this.settings.progress = createProgresInstance(this.settings.logger);
+    if (this.settings.logOptions && !this.settings.progress) {
+      this.settings.progress = createProgresInstance(this.settings.logOptions);
     }
   }
 
@@ -74,15 +74,20 @@ export class Trickle<X> {
   new<M extends any[], N>(
     func: (...x: M) => N | Promise<N>,
     args: M | WithCustomArg<M>,
-    action: string = "new"
+    action: string = "new",
+    opts?: { ignoreLogs: boolean }
   ) {
-    this.settings.progress?.emit("add", action);
+    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
     this.ops.push({ fn: () => func(...(this.resolveArgs(args) as M)), action });
     return new Trickle<N>(this.globals, this.context, this.settings, this.ops);
   }
 
-  store(fn: (x: X) => { [key: string]: any }, action: string = "store") {
-    this.settings.progress?.emit("add", action);
+  store(
+    fn: (x: X) => { [key: string]: any },
+    action: string = "store",
+    opts?: { ignoreLogs: boolean }
+  ) {
+    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
     this.ops.push({
       fn: (obj: X) => {
         let x = fn(obj);
@@ -94,8 +99,12 @@ export class Trickle<X> {
     return this;
   }
 
-  continue(func: (x: X) => void, action: string = "continue") {
-    this.settings.progress?.emit("add", action);
+  continue(
+    func: (x: X) => void,
+    action: string = "continue",
+    opts?: { ignoreLogs: boolean }
+  ) {
+    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
     this.ops.push({
       fn: (prev: any) => {
         func(prev);
@@ -106,20 +115,30 @@ export class Trickle<X> {
     return this;
   }
 
-  transform<N>(func: (x: X) => N, action: string = "transform") {
-    this.settings.progress?.emit("add", action);
+  transform<N>(
+    func: (x: X) => N,
+    action: string = "transform",
+    opts?: { ignoreLog: boolean }
+  ) {
+    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
     this.ops.push({ fn: (prev: any) => func(prev), action });
     return new Trickle<N>(this.globals, this.context, this.settings, this.ops);
   }
 
   async done() {
-    this.settings.progress?.emit("start");
+    this.settings.progress?.emit(ProgressEvent.START);
     let prev = null;
     for (let { fn, action } of this.ops) {
-      prev = await Promise.resolve(fn(prev));
-      this.settings.progress?.emit("result", action, prev);
+      try {
+        prev = await Promise.resolve(fn(prev));
+        this.settings.progress?.emit(ProgressEvent.RESULT, action, prev);
+      } catch (err) {
+        this.settings.progress?.emit(ProgressEvent.FAILURE, action, prev);
+        // Wait for the pending rendering events to process
+        await new Promise((_, reject) => setTimeout(() => reject(err), 0));
+      }
     }
-    this.settings.progress?.emit("end");
+    this.settings.progress?.emit(ProgressEvent.SUCCESS);
     return prev;
   }
 }
