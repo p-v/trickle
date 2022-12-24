@@ -35,8 +35,8 @@ export const createProgresInstance = (options: LogOptions) => {
 
   progress.on(
     ProgressEvent.ADD,
-    (step, opts: { ignoreLogs: boolean } = { ignoreLogs: false }) => {
-      stepMap.set(step, { opts });
+    (step, aid, opts: { ignoreLogs: boolean } = { ignoreLogs: false }) => {
+      stepMap.set(aid, { step, opts });
     }
   );
 
@@ -45,35 +45,37 @@ export const createProgresInstance = (options: LogOptions) => {
       const table = new Table({
         head: ["Steps to execute"],
       });
-      for (let [key, _] of stepMap) {
-        table.push([key]);
+      for (let [_, { step, opts }] of stepMap) {
+        if (opts.ignoreLogs) continue;
+
+        table.push([step]);
       }
       logger.info(table.toString());
     }, 0);
   });
 
-  progress.on(ProgressEvent.RESULT, (step, result) => {
+  progress.on(ProgressEvent.RESULT, (aid, result) => {
+    const { step, opts } = stepMap.get(aid);
     if (!disableDebugLogs) {
       logger.debug(`Result for "${step}": \n${JSON.stringify(result) ?? ""}`);
     }
-    const { opts } = stepMap.get(step);
-    stepMap.set(step, { opts, result });
+    stepMap.set(aid, { step, opts, result });
   });
 
-  progress.on(ProgressEvent.FAILURE, (step: string, err: any) => {
+  progress.on(ProgressEvent.FAILURE, (aid: string, err: any) => {
     setTimeout(() => {
       const table = new Table({
         head: ["Step", "Result"],
         colAligns: ["left", "left"],
         ...extraTableOpts,
       });
-      for (let [key, { opts, result }] of stepMap) {
+      for (let [key, { step, opts, result }] of stepMap) {
         if (opts.ignoreLogs) continue;
 
-        if (key === step) {
-          table.push([key, err.toString()]);
+        if (key === aid) {
+          table.push([step, err.toString()]);
         } else {
-          table.push([key, JSON.stringify(result, null, 4) ?? ""]);
+          table.push([step, JSON.stringify(result, null, 4) ?? ""]);
         }
       }
       logger.info(table.toString());
@@ -88,10 +90,10 @@ export const createProgresInstance = (options: LogOptions) => {
         truncate: '...',
         ...extraTableOpts,
       });
-      for (let [key, { opts, result }] of stepMap) {
+      for (let [_, { step, opts, result }] of stepMap) {
         if (opts.ignoreLogs) continue;
 
-        table.push([key, JSON.stringify(result, null, 4) ?? ""]);
+        table.push([step, JSON.stringify(result, null, 4) ?? ""]);
       }
       logger.info(table.toString());
     }, 0);

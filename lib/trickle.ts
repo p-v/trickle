@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import _ from "lodash";
 import { LogOptions, createProgresInstance, ProgressEvent } from "./progress";
+import { generateActionId } from "./utils";
 
 type Environment = { [key: string]: any };
 
@@ -77,8 +78,9 @@ export class Trickle<X> {
     action: string = "new",
     opts?: { ignoreLogs: boolean }
   ) {
-    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
-    this.ops.push({ fn: () => func(...(this.resolveArgs(args) as M)), action });
+    const aid = generateActionId();
+    this.settings.progress?.emit(ProgressEvent.ADD, action, aid, opts);
+    this.ops.push({ fn: () => func(...(this.resolveArgs(args) as M)), aid });
     return new Trickle<N>(this.globals, this.context, this.settings, this.ops);
   }
 
@@ -87,14 +89,15 @@ export class Trickle<X> {
     action: string = "store",
     opts?: { ignoreLogs: boolean }
   ) {
-    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
+    const aid = generateActionId();
+    this.settings.progress?.emit(ProgressEvent.ADD, action, aid, opts);
     this.ops.push({
       fn: (obj: X) => {
         let x = fn(obj);
         Object.keys(x).forEach((k) => (this.context[k] = x[k]));
         return obj;
       },
-      action,
+      aid,
     });
     return this;
   }
@@ -104,13 +107,14 @@ export class Trickle<X> {
     action: string = "continue",
     opts?: { ignoreLogs: boolean }
   ) {
-    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
+    const aid = generateActionId();
+    this.settings.progress?.emit(ProgressEvent.ADD, action, aid, opts);
     this.ops.push({
       fn: (prev: any) => {
         func(prev);
         return prev;
       },
-      action,
+      aid,
     });
     return this;
   }
@@ -120,20 +124,21 @@ export class Trickle<X> {
     action: string = "transform",
     opts?: { ignoreLog: boolean }
   ) {
-    this.settings.progress?.emit(ProgressEvent.ADD, action, opts);
-    this.ops.push({ fn: (prev: any) => func(prev), action });
+    const aid = generateActionId();
+    this.settings.progress?.emit(ProgressEvent.ADD, action, aid, opts);
+    this.ops.push({ fn: (prev: any) => func(prev), aid });
     return new Trickle<N>(this.globals, this.context, this.settings, this.ops);
   }
 
   async done() {
     this.settings.progress?.emit(ProgressEvent.START);
     let prev = null;
-    for (let { fn, action } of this.ops) {
+    for (let { fn, aid } of this.ops) {
       try {
         prev = await Promise.resolve(fn(prev));
-        this.settings.progress?.emit(ProgressEvent.RESULT, action, prev);
+        this.settings.progress?.emit(ProgressEvent.RESULT, aid, prev);
       } catch (err) {
-        this.settings.progress?.emit(ProgressEvent.FAILURE, action, prev);
+        this.settings.progress?.emit(ProgressEvent.FAILURE, aid, err);
         // Wait for the pending rendering events to process
         await new Promise((_, reject) => setTimeout(() => reject(err), 0));
       }
