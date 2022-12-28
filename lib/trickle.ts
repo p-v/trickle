@@ -103,7 +103,7 @@ export class Trickle<X> {
   }
 
   continue(
-    func: (x: X) => void,
+    func: (x: X, context?: Environment, global?: Environment) => void,
     action: string = "continue",
     opts?: { ignoreLogs: boolean }
   ) {
@@ -111,7 +111,7 @@ export class Trickle<X> {
     this.settings.progress?.emit(ProgressEvent.ADD, action, aid, opts);
     this.ops.push({
       fn: (prev: any) => {
-        func(prev);
+        func(prev, _.cloneDeep(this.context), _.cloneDeep(this.globals));
         return prev;
       },
       aid,
@@ -147,3 +147,6 @@ export class Trickle<X> {
     return prev;
   }
 }
+
+export const createTrickle = (globals: Environment, settings: Options) =>
+  new Trickle(globals, {}, settings, []);

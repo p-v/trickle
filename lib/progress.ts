@@ -87,7 +87,7 @@ export const createProgresInstance = (options: LogOptions) => {
       const table = new Table({
         head: ["Step", "Result"],
         colAligns: ["left", "left"],
-        truncate: '...',
+        truncate: "...",
         ...extraTableOpts,
       });
       for (let [_, { step, opts, result }] of stepMap) {

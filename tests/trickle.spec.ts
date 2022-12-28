@@ -1,4 +1,4 @@
-import Trickle, { retryFn as retry } from "../lib";
+import { Trickle, retryFn as retry } from "../lib";
 import { expect } from "chai";
 import sinon from "sinon";
 import { once } from "lodash";
